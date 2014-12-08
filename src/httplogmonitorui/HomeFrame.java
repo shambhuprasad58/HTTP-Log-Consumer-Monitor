@@ -9,6 +9,7 @@ import httplogmonitorutil.Alert;
 import httplogmonitorutil.HttpObject;
 import httplogmonitorutil.Statistics;
 import httplogmonitorutil.UserPreferences;
+import httplogmonitorutil.Utility;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
@@ -28,23 +29,23 @@ import javax.swing.table.DefaultTableModel;
 
 /**
  *
- * @author root
+ * @author shambhu
  */
 public class HomeFrame extends javax.swing.JFrame {
 
-    LinkedBlockingQueue<UserPreferences> preferenceQueue;
-    LinkedBlockingQueue<ArrayList<HttpObject>> mostHitsTopURL;
-    LinkedBlockingQueue<Alert> alertQueue;
-    LinkedBlockingQueue<Statistics> statsQueue;
-    String logFile;
-    Alert previousAlert, previousPeakAlert;
-    int threshold;
-    JPanel alertsPanel;
-    String[] columns = {"URI Section","Hit Count"};
+    private LinkedBlockingQueue<UserPreferences> preferenceQueue;
+    private LinkedBlockingQueue<ArrayList<HttpObject>> mostHitsTopURL;
+    private LinkedBlockingQueue<Alert> alertQueue;
+    private LinkedBlockingQueue<Statistics> statsQueue;
+    private String logFile;
+    private Alert previousAlert, previousPeakAlert;
+    private JPanel alertsPanel;
+    private String[] columns = {"URI Section","Hit Count"};
     /**
      * Creates new form HomeFrame
      */
-    public HomeFrame(LinkedBlockingQueue<UserPreferences> preferenceQueue, LinkedBlockingQueue<Alert> alertQueue, LinkedBlockingQueue<Statistics> statsQueue, LinkedBlockingQueue<ArrayList<HttpObject>> mostHitsTopURL)
+    public HomeFrame(LinkedBlockingQueue<UserPreferences> preferenceQueue, LinkedBlockingQueue<Alert> alertQueue, 
+            LinkedBlockingQueue<Statistics> statsQueue, LinkedBlockingQueue<ArrayList<HttpObject>> mostHitsTopURL)
     {
         this.preferenceQueue = preferenceQueue;
         this.mostHitsTopURL = mostHitsTopURL;
@@ -99,16 +100,7 @@ public class HomeFrame extends javax.swing.JFrame {
 
         mostHitsTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null},
-                {null, null},
-                {null, null},
-                {null, null},
-                {null, null},
-                {null, null},
-                {null, null},
-                {null, null},
-                {null, null},
-                {null, null}
+
             },
             new String [] {
                 "URL Section", "Hit Count"
@@ -322,17 +314,16 @@ public class HomeFrame extends javax.swing.JFrame {
     }
     
     private void userPreferenceUpdateButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_userPreferenceUpdateButtonActionPerformed
-        // TODO add your handling code here:
         if(!inputValidator())
         {
             JOptionPane.showMessageDialog(this, "Check your input.");
             return;
         }
         userPreferenceUpdateButton.setText("Update");
-        this.threshold = Integer.parseInt(thresholdTextField.getText());
         if(logFile == null || logFile.isEmpty())
             return;
-        UserPreferences userPreferences = new UserPreferences(Integer.parseInt(thresholdTextField.getText()), logFile, Integer.parseInt(mostHitsTextField.getText())*1000, Integer.parseInt(alertTextField.getText())*1000);
+        UserPreferences userPreferences = new UserPreferences(Integer.parseInt(thresholdTextField.getText()), logFile, 
+                Integer.parseInt(mostHitsTextField.getText())*1000, Integer.parseInt(alertTextField.getText())*1000);
         try {
             preferenceQueue.put(userPreferences);
         } catch (InterruptedException ex) {
@@ -344,9 +335,9 @@ public class HomeFrame extends javax.swing.JFrame {
     {
         try
         {
-            Integer.parseInt(thresholdTextField.getText());
-            Integer.parseInt(alertTextField.getText());
-            Integer.parseInt(mostHitsTextField.getText());
+            if(Integer.parseInt(thresholdTextField.getText()) < 1) return false;
+            if(Integer.parseInt(alertTextField.getText()) < 1) return false;
+            if(Integer.parseInt(mostHitsTextField.getText()) < 1) return false;
             File f = new File(logFile);
             if(f.exists() && !f.isDirectory()) 
             { 
@@ -361,7 +352,6 @@ public class HomeFrame extends javax.swing.JFrame {
     }
     
     private void fileChooserButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_fileChooserButtonActionPerformed
-        // TODO add your handling code here:
         JFileChooser fileChooser = new JFileChooser();
         int returnVal = fileChooser.showOpenDialog(HomeFrame.this);
 
@@ -382,7 +372,6 @@ public class HomeFrame extends javax.swing.JFrame {
 
     private void updateNewHits() throws InterruptedException
     {
-        //DefaultTableModel mostHitsTableModel = (DefaultTableModel) mostHitsTable.getModel();
         Timer timer = new Timer(0, new ActionListener() {
 
             @Override
@@ -407,7 +396,7 @@ public class HomeFrame extends javax.swing.JFrame {
                 return;
             for(HttpObject obj : topURLs)
             {
-                tableModel.addRow(new String[]{obj.getUrl(), String.valueOf(obj.getHitCount())});
+                tableModel.addRow(new String[]{Utility.getSection(obj.getUrl()), String.valueOf(obj.getHitCount())});
             }
         } catch (InterruptedException ex) {
             Logger.getLogger(HomeFrame.class.getName()).log(Level.SEVERE, null, ex);
@@ -451,7 +440,8 @@ public class HomeFrame extends javax.swing.JFrame {
                     }
                     else
                     {
-                        addAlertRow("Peak traffic - hits = "+previousPeakAlert.getHitCount()+", triggered at "+previousPeakAlert.getAlertTime(), Color.RED);
+                        addAlertRow("Peak traffic - hits = "+previousPeakAlert.getHitCount()+", triggered at "+previousPeakAlert.getAlertTime(), 
+                                Color.RED);
                         addAlertRow("Traffic back to normal - hits = "+alert.getHitCount()+", at "+alert.getAlertTime(), Color.BLACK);
                         previousPeakAlert = new Alert(null, 0, true);
                     }
@@ -484,7 +474,8 @@ public class HomeFrame extends javax.swing.JFrame {
         alertsScrollPane.revalidate();
     }
     
-    public static void Begin(LinkedBlockingQueue<UserPreferences> preferenceQueue, LinkedBlockingQueue<Alert> alertQueue, LinkedBlockingQueue<Statistics> statsQueue, LinkedBlockingQueue<ArrayList<HttpObject>> mostHitsTopURL)
+    public static void begin(LinkedBlockingQueue<UserPreferences> preferenceQueue, LinkedBlockingQueue<Alert> alertQueue, 
+            LinkedBlockingQueue<Statistics> statsQueue, LinkedBlockingQueue<ArrayList<HttpObject>> mostHitsTopURL)
     {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">

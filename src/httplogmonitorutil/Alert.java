@@ -9,7 +9,7 @@ import java.util.Date;
 
 /**
  *
- * @author root
+ * @author shambhu
  */
 public class Alert {
     private Date alertTime;

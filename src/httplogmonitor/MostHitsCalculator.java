@@ -19,12 +19,12 @@ import java.util.logging.Logger;
 
 /**
  *
- * @author root
+ * @author shambhu
  */
 public class MostHitsCalculator extends TimerTask
 {
-    LinkedBlockingQueue<HttpObject> mostHitsURLQueue;
-    LinkedBlockingQueue<ArrayList<HttpObject>> mostHitsTopURL;
+    private LinkedBlockingQueue<HttpObject> mostHitsURLQueue;
+    private LinkedBlockingQueue<ArrayList<HttpObject>> mostHitsTopURL;
     
     public MostHitsCalculator(LinkedBlockingQueue<HttpObject> mostHitsURLQueue, LinkedBlockingQueue<ArrayList<HttpObject>> mostHitsTopURL)
     {

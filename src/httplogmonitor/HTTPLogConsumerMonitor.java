@@ -17,7 +17,7 @@ import java.util.logging.Logger;
 
 /**
  *
- * @author root
+ * @author shambhu
  */
 public class HTTPLogConsumerMonitor {
 
@@ -35,11 +35,12 @@ public class HTTPLogConsumerMonitor {
         Sniffer sniffer = new Sniffer(preferenceQueue, mostHitsURLQueue, alertURLQueue, alertQueue, statsQueue, mostHitsTopURL);
         Thread snifferThread = new Thread(sniffer);
         snifferThread.start();
-        Thread displayUIThread = new Thread(new DisplayUI(preferenceQueue, alertQueue, statsQueue, mostHitsTopURL));
-        displayUIThread.start();
+        HomeFrame.begin(preferenceQueue, alertQueue, statsQueue, mostHitsTopURL);
+//        Thread displayUIThread = new Thread(new DisplayUI(preferenceQueue, alertQueue, statsQueue, mostHitsTopURL));
+//        displayUIThread.start();
         try 
         {
-            Thread.sleep(Long.MAX_VALUE);
+            snifferThread.join();
         } catch (InterruptedException ex) {
             Logger.getLogger(HTTPLogConsumerMonitor.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -47,12 +48,13 @@ public class HTTPLogConsumerMonitor {
     
     private static class DisplayUI implements Runnable
     {
-        LinkedBlockingQueue<UserPreferences> preferenceQueue;
-        LinkedBlockingQueue<ArrayList<HttpObject>> mostHitsTopURL;
-        LinkedBlockingQueue<Alert> alertQueue;
-        LinkedBlockingQueue<Statistics> statsQueue;
+        private LinkedBlockingQueue<UserPreferences> preferenceQueue;
+        private LinkedBlockingQueue<ArrayList<HttpObject>> mostHitsTopURL;
+        private LinkedBlockingQueue<Alert> alertQueue;
+        private LinkedBlockingQueue<Statistics> statsQueue;
         
-        public DisplayUI(LinkedBlockingQueue<UserPreferences> preferenceQueue, LinkedBlockingQueue<Alert> alertQueue, LinkedBlockingQueue<Statistics> statsQueue, LinkedBlockingQueue<ArrayList<HttpObject>> mostHitsTopURL)
+        public DisplayUI(LinkedBlockingQueue<UserPreferences> preferenceQueue, LinkedBlockingQueue<Alert> alertQueue, 
+                LinkedBlockingQueue<Statistics> statsQueue, LinkedBlockingQueue<ArrayList<HttpObject>> mostHitsTopURL)
         {
             this.preferenceQueue = preferenceQueue;
             this.mostHitsTopURL = mostHitsTopURL;
@@ -61,7 +63,7 @@ public class HTTPLogConsumerMonitor {
         }
         @Override
         public void run() {
-                HomeFrame.Begin(preferenceQueue, alertQueue, statsQueue, mostHitsTopURL);
+                HomeFrame.begin(preferenceQueue, alertQueue, statsQueue, mostHitsTopURL);
         }
         
     }

@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 
 /**
  *
- * @author root
+ * @author shambhu
  */
 public class AlertTracker implements Runnable
 {
@@ -41,8 +41,8 @@ public class AlertTracker implements Runnable
             {
                 HttpObject lastURL = alertURLQueue.element();
                 long diff = new Date().getTime() - lastURL.getHittingTime().getTime();
-                if(diff < (alertGapInMillisecond-100))                                          //100 milliseconds early wake up
-                    Thread.sleep(alertGapInMillisecond - diff -100);
+                if(diff < (alertGapInMillisecond))                                          //100 milliseconds early wake up
+                    Thread.sleep(alertGapInMillisecond - diff);
                 if(alertURLQueue.size() <= threshold)
                     alertQueue.put(new Alert(new Date(), alertURLQueue.size(), false));
                 alertURLQueue.remove();

@@ -7,7 +7,7 @@ package httplogmonitorutil;
 
 /**
  *
- * @author root
+ * @author shambhu
  */
 public class Utility {
     public static String getSection(String url)

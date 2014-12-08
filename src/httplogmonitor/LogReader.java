@@ -26,25 +26,23 @@ import java.util.logging.Logger;
 
 /**
  *
- * @author root
+ * @author shambhu
  */
-public class LogReader {
+public class LogReader implements Runnable{
     private static final Logger logger = Logger.getLogger("LogReader");
     private String logFile;
-    private long tooLateTime = -1;
-    private final long maxMsToWait;
     private final File file;
-    private long offset = 0;
-    private int lineCount = 0;
-    private boolean ended = false;
-    private WatchService watchService = null; 
-    ArrayDeque<String> lines = new ArrayDeque<>();
-    LinkedBlockingQueue<HttpObject> mostHitsURLQueue;
-    LinkedBlockingQueue<HttpObject> alertURLQueue;
-    LinkedBlockingQueue<Statistics> statsQueue;
-    LinkedBlockingQueue<Alert> alertQueue;
-    Statistics stats;
-    int threshold;
+    private long offset;
+    private int lineCount;
+    private boolean ended;
+    private WatchService watchService; 
+    private ArrayDeque<String> lines;
+    private LinkedBlockingQueue<HttpObject> mostHitsURLQueue;
+    private LinkedBlockingQueue<HttpObject> alertURLQueue;
+    private LinkedBlockingQueue<Statistics> statsQueue;
+    private LinkedBlockingQueue<Alert> alertQueue;
+    private Statistics stats;
+    private int threshold;
 
     /**
      * Allows output of a file that is being updated by another process.
@@ -53,10 +51,15 @@ public class LogReader {
      * watching will stop. If =0, watch will continue until <code>stop()</code>
      * is called.
      */
-    public LogReader(String logFile, long maxTimeToWaitInSeconds, LinkedBlockingQueue<HttpObject> mostHitsURLQueue, LinkedBlockingQueue<HttpObject> alertURLQueue, LinkedBlockingQueue<Statistics> statsQueue, LinkedBlockingQueue<Alert> alertQueue, int threshold) throws IOException {
+    public LogReader(String logFile, LinkedBlockingQueue<HttpObject> mostHitsURLQueue, LinkedBlockingQueue<HttpObject> alertURLQueue, 
+            LinkedBlockingQueue<Statistics> statsQueue, LinkedBlockingQueue<Alert> alertQueue, int threshold) throws IOException {
+        this.offset = 0;
+        this.lineCount = 0;
+        this.ended = false;
+        this.watchService = null; 
+        this.lines = new ArrayDeque<>();
         this.logFile = logFile;
         this.file = new File(logFile);
-        this.maxMsToWait = maxTimeToWaitInSeconds * 1000;
         this.mostHitsURLQueue = mostHitsURLQueue;
         this.alertURLQueue = alertURLQueue;
         this.statsQueue = statsQueue;
@@ -86,10 +89,7 @@ public class LogReader {
         updateOffset();
         // listens for FS events
         new Thread(new FileWatcher()).start();  
-        if (maxMsToWait != 0) {
-            // kills FS event listener after timeout
-            new Thread(new WatchDog()).start();
-        }     
+        new Thread(new WatchDog()).start();
     }
 
     /**
@@ -107,7 +107,6 @@ public class LogReader {
     }
 
     private synchronized void updateOffset() {
-        tooLateTime = System.currentTimeMillis() + maxMsToWait;
         try {
             BufferedReader br = new BufferedReader(new FileReader(file));
             br.skip(offset);            
@@ -157,21 +156,17 @@ public class LogReader {
     /**
      * @return next line that will be returned; zero-based
      */
-    private int getLineNumber() {
-        return lineCount;
-    }
 
     private class WatchDog implements Runnable {
         @Override
         public void run() {
-            while (System.currentTimeMillis() < tooLateTime) {
+            while(true) {                                        //never stop the Log Reader
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ex) {
                     // do nothing
                 }
             }
-            stop();
         }
     }
 
@@ -202,26 +197,37 @@ public class LogReader {
             ended = true;
         }
     }
-
-    public void reader() throws InterruptedException
-    {
+    
+    @Override
+    public void run() {
         Thread statsThread = new Thread(new SendStats());
         statsThread.start();
         start();
         while ( ! hasEnded()) {
             while (linesAvailable()) {
-                HttpObject newLog = new HttpObject();
-                newLog = newLog.parseLine(getLine());
-                updateStats(newLog);
-                mostHitsURLQueue.put(newLog);
-                alertURLQueue.put(newLog);
-                int alertURLQueueSize = alertURLQueue.size();
-                if(alertURLQueueSize > threshold)
-                    alertQueue.put(new Alert(new Date(), alertURLQueueSize, true));
+                try {
+                    HttpObject newLog = new HttpObject();
+                    newLog = newLog.parseLog(getLine());
+                    if(newLog == null)
+                        continue;
+                    updateStats(newLog);
+                    mostHitsURLQueue.put(newLog);
+                    alertURLQueue.put(newLog);
+                    int alertURLQueueSize = alertURLQueue.size();
+                    if(alertURLQueueSize > threshold)
+                        alertQueue.put(new Alert(new Date(), alertURLQueueSize, true));
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(LogReader.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
-            Thread.sleep(500);
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(LogReader.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
+    
     private void updateStats(HttpObject newLog)
     {
         try

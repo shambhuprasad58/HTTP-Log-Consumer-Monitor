@@ -7,29 +7,25 @@ package httplogmonitorutil;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  *
- * @author root
+ * @author shambhu
  */
-public class HttpObject implements Comparator<HttpObject>, Comparable<HttpObject>{
+public class HttpObject implements Comparable<HttpObject>{
     private String url;
     private Date hittingTime;
     private int hitCount;
     private long bytesDownloaded;
     private String host, method, path, status;
-    SimpleDateFormat formatter = new SimpleDateFormat("dd/MMM/yyyy:hh:mm:ss Z");
+    private SimpleDateFormat formatter;
     
-    public HttpObject(){}
-    public HttpObject(String url, Date hittingTime, int hitCount, String host, String method, String path, String status)
+    public HttpObject()
     {
-        this.url = url;
-        this.hittingTime = hittingTime;
-        this.hitCount = hitCount;
+        formatter = new SimpleDateFormat("dd/MMM/yyyy:hh:mm:ss Z");
     }
     
     public String getUrl()
@@ -68,41 +64,46 @@ public class HttpObject implements Comparator<HttpObject>, Comparable<HttpObject
     {
         this.hitCount = hitCount;
     }
-    public HttpObject parseLine(String line)
+    public HttpObject parseLog(String log)
     {
-        if(!line.split(" ")[0].equals("-"))
-            this.host = line.split(" ")[0];
-        String dateTime = line.split("\\[")[1];
-        dateTime = dateTime.split("\\]")[0];
-        try {
-            this.hittingTime = formatter.parse(dateTime);
-        } catch (ParseException ex) {
-            Logger.getLogger(HttpObject.class.getName()).log(Level.SEVERE, null, ex);
-            this.hittingTime = new Date();
-        }
-        this.method = line.split(" ")[5].replace("\"", "");
-        this.path = line.split(" ")[6];
-        this.url = this.host+this.path;
-        this.status = line.split(" ")[8];
         try
         {
-            this.bytesDownloaded = Long.parseLong(line.split(" ")[9]);
+            String[] parts = log.split(" ");
+            if(!parts[0].equals("-"))
+                this.host = parts[0];
+            String dateTime = parts[3]+" "+parts[4];
+            dateTime = dateTime.replaceAll("\\[", "");
+            dateTime = dateTime.replaceAll("\\]", "");
+            try {
+                this.hittingTime = formatter.parse(dateTime);
+            } catch (ParseException ex) {
+                Logger.getLogger(HttpObject.class.getName()).log(Level.SEVERE, null, ex);
+                this.hittingTime = new Date();
+            }
+            this.method = parts[5].replace("\"", "");
+            this.path = parts[6];
+            this.url = this.host+this.path;
+            this.status = parts[8];
+            try
+            {
+                this.bytesDownloaded = Long.parseLong(parts[9]);
+            }
+            catch(Exception ex)
+            {
+                this.bytesDownloaded = 0;
+            }
+            return this;
         }
         catch(Exception ex)
         {
-            this.bytesDownloaded = 0;
+            Logger.getLogger(HttpObject.class.getName()).log(Level.SEVERE, null, ex);
+            System.err.println("Skipped a badly formatted log.");
+            return null;
         }
-        return this;
-    }
-
-    @Override
-    public int compare(HttpObject o1, HttpObject o2) {
-        return o2.getHitCount() - o1.getHitCount();
     }
 
     @Override
     public int compareTo(HttpObject o) {
         return((Integer)o.getHitCount()).compareTo(this.hitCount);
     }
-    
 }

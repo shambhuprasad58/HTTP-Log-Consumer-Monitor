@@ -7,7 +7,7 @@ package httplogmonitorutil;
 
 /**
  *
- * @author root
+ * @author shambhu
  */
 public class UserPreferences {
     private int threshold;
