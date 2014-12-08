@@ -28,7 +28,7 @@ import java.util.logging.Logger;
  *
  * @author shambhu
  */
-public class LogReader implements Runnable{
+public class LogReader extends Thread{
     private static final Logger logger = Logger.getLogger("LogReader");
     private String logFile;
     private final File file;
@@ -82,20 +82,11 @@ public class LogReader implements Runnable{
         }
         br.close();
     }
-    /**
-     * Start watch.
-     */
-    private void start() {
-        updateOffset();
-        // listens for FS events
-        new Thread(new FileWatcher()).start();  
-        new Thread(new WatchDog()).start();
-    }
 
     /**
      * Stop watch.
      */
-    private void stop() {
+    private void stopWatchService() {
         if (watchService != null) {
             try {
                 watchService.close();
@@ -153,24 +144,7 @@ public class LogReader implements Runnable{
         return ended;
     }
 
-    /**
-     * @return next line that will be returned; zero-based
-     */
-
-    private class WatchDog implements Runnable {
-        @Override
-        public void run() {
-            while(true) {                                        //never stop the Log Reader
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException ex) {
-                    // do nothing
-                }
-            }
-        }
-    }
-
-    private class FileWatcher implements Runnable {
+    private class FileWatcher extends Thread{
         private final Path path = file.toPath().getParent();
         @Override
         public void run() {
@@ -202,8 +176,9 @@ public class LogReader implements Runnable{
     public void run() {
         Thread statsThread = new Thread(new SendStats());
         statsThread.start();
-        start();
-        while ( ! hasEnded()) {
+        updateOffset();
+        new Thread(new FileWatcher()).start();  
+        while ( ! this.isInterrupted()) {
             while (linesAvailable()) {
                 try {
                     HttpObject newLog = new HttpObject();
@@ -218,12 +193,14 @@ public class LogReader implements Runnable{
                         alertQueue.put(new Alert(new Date(), alertURLQueueSize, true));
                 } catch (InterruptedException ex) {
                     Logger.getLogger(LogReader.class.getName()).log(Level.SEVERE, null, ex);
+                    return;
                 }
             }
             try {
                 Thread.sleep(500);
             } catch (InterruptedException ex) {
                 Logger.getLogger(LogReader.class.getName()).log(Level.SEVERE, null, ex);
+                return;
             }
         }
     }

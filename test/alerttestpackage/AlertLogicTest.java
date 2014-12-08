@@ -98,15 +98,13 @@ public class AlertLogicTest {
             alert = alert || al.getAlertType();
         }
         assertTrue(alert);
-        
-        writeToFile(105);
+        writeToFile(101);
         Thread.sleep(3*1000);
         while(!alertQueue.isEmpty())
         {
             Alert al = alertQueue.take();
             assertTrue(al.getAlertType());
         }
-        
         Thread.sleep(3*1000);
         while(!alertQueue.isEmpty())
         {

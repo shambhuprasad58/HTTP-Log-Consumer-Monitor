@@ -33,6 +33,10 @@ public class Sniffer implements Runnable{
     private String logFile;
     private long timeGapInMillisecond;
     private long alertGapInMillisecond;
+    private Thread logThread;
+    private Thread alertThread;
+    private TimerTask mostHitsTimerTask;
+    private Timer mostHitsTimer;
     
     public Sniffer(LinkedBlockingQueue<UserPreferences> preferenceQueue, LinkedBlockingQueue<HttpObject> mostHitsURLQueue, 
             LinkedBlockingQueue<HttpObject> alertURLQueue, LinkedBlockingQueue<Alert> alertQueue, LinkedBlockingQueue<Statistics> statsQueue, 
@@ -48,15 +52,15 @@ public class Sniffer implements Runnable{
         this.timeGapInMillisecond = -1;
         this.alertGapInMillisecond = -1;
         this.logFile = "";
+        this.logThread = null;
+        this.alertThread = null;
+        this.mostHitsTimerTask = null;
+        this.mostHitsTimer = null;
     }
     
     @Override
     public void run()
     {
-        Thread logThread = null;
-        Thread alertThread = null;
-        TimerTask mostHitsTimerTask = null;
-        Timer mostHitsTimer = null;
         while(true)
         {
             UserPreferences preference;
@@ -66,15 +70,15 @@ public class Sniffer implements Runnable{
                 continue;
             if(preference.getAlertGapInMillisecond() != alertGapInMillisecond || preference.getThreshold() != this.threshold)
             {
-                restartAlertTracker(preference.getAlertGapInMillisecond(), preference.getThreshold(), alertThread);
+                restartAlertTracker(preference.getAlertGapInMillisecond(), preference.getThreshold());
             }
             if(!preference.getLogFile().equals(logFile) || preference.getThreshold() != this.threshold)
             {
-                restartLogging(preference.getLogFile(), logThread, preference.getThreshold());
+                restartLogging(preference.getLogFile(), preference.getThreshold());
             }
             if(preference.getTimeGapInMillisecond() != timeGapInMillisecond)
             {
-                restartMostHitsCalculator(preference.getTimeGapInMillisecond(), mostHitsTimer, mostHitsTimerTask);
+                restartMostHitsCalculator(preference.getTimeGapInMillisecond());
             }
             } catch (InterruptedException ex) {
                 Logger.getLogger(Sniffer.class.getName()).log(Level.SEVERE, null, ex);
@@ -85,7 +89,7 @@ public class Sniffer implements Runnable{
         }
     }
     
-    private void restartLogging(String newLogFile, Thread logThread, int newThreshold) throws IOException
+    private void restartLogging(String newLogFile, int newThreshold) throws IOException
     {
         logFile = newLogFile;
         this.threshold = newThreshold;
@@ -96,7 +100,7 @@ public class Sniffer implements Runnable{
         logThread.start();
     }
     
-    private void restartMostHitsCalculator(long newTimeGapInMillisecond, Timer mostHitsTimer, TimerTask mostHitsTimerTask)
+    private void restartMostHitsCalculator(long newTimeGapInMillisecond)
     {
         this.timeGapInMillisecond = newTimeGapInMillisecond;
         if(mostHitsTimer != null)
@@ -106,7 +110,7 @@ public class Sniffer implements Runnable{
         mostHitsTimer.scheduleAtFixedRate(mostHitsTimerTask, 0, timeGapInMillisecond);
     }
     
-    private void restartAlertTracker(long newAlertGapInMillisecond, int newThreshold, Thread alertThread)
+    private void restartAlertTracker(long newAlertGapInMillisecond, int newThreshold)
     {
         alertGapInMillisecond = newAlertGapInMillisecond;
         if(alertThread != null)

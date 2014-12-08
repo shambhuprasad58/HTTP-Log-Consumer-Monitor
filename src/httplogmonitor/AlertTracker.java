@@ -17,7 +17,7 @@ import java.util.logging.Logger;
  *
  * @author shambhu
  */
-public class AlertTracker implements Runnable
+public class AlertTracker extends Thread
 {
     private LinkedBlockingQueue<HttpObject> alertURLQueue;
     private LinkedBlockingQueue<Alert> alertQueue;
@@ -35,7 +35,7 @@ public class AlertTracker implements Runnable
     @Override
     public void run() 
     {
-        while(true)
+        while(!this.isInterrupted())
         {
             try 
             {
@@ -48,6 +48,7 @@ public class AlertTracker implements Runnable
                 alertURLQueue.remove();
             } catch (InterruptedException ex) {
                 Logger.getLogger(AlertTracker.class.getName()).log(Level.SEVERE, null, ex);
+                return;
             }
             catch(NoSuchElementException ex)
             {
@@ -55,6 +56,7 @@ public class AlertTracker implements Runnable
                     Thread.sleep(500);
                 } catch (InterruptedException ex1) {
                     Logger.getLogger(AlertTracker.class.getName()).log(Level.SEVERE, null, ex1);
+                    return;
                 }
             }
         }
